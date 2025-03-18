@@ -1,0 +1,19 @@
+# Main Ubuntu Repositories
+deb http://archive.ubuntu.com/ubuntu jammy main restricted universe multiverse
+deb-src http://archive.ubuntu.com/ubuntu jammy main restricted universe multiverse
+
+# Security Updates
+deb http://security.ubuntu.com/ubuntu jammy-security main restricted universe multiverse
+deb-src http://security.ubuntu.com/ubuntu jammy-security main restricted universe multiverse
+
+# Updates
+deb http://archive.ubuntu.com/ubuntu jammy-updates main restricted universe multiverse
+deb-src http://archive.ubuntu.com/ubuntu jammy-updates main restricted universe multiverse
+
+# Backports
+deb http://archive.ubuntu.com/ubuntu jammy-backports main restricted universe multiverse
+deb-src http://archive.ubuntu.com/ubuntu jammy-backports main restricted universe multiverse
+
+# Canonical Partner Repository (Optional)
+deb http://archive.canonical.com/ubuntu jammy partner
+deb-src http://archive.canonical.com/ubuntu jammy partner
