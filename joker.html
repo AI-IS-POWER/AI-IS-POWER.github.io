@@ -1,129 +1,138 @@
 <!DOCTYPE html>
-<html lang="en">
+<html>
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
   <title>Ping Pong Game - Human vs AI</title>
   <style>
     canvas {
-      background: black;
+      background: #000;
       display: block;
       margin: 0 auto;
-      touch-action: none; /* Prevents scrolling on touch */
+    }
+    body {
+      margin: 0;
+      touch-action: none;
     }
   </style>
 </head>
 <body>
-<canvas id="gameCanvas" width="800" height="500"></canvas>
+  <canvas id="gameCanvas" width="800" height="500"></canvas>
+  <script>
+    const canvas = document.getElementById('gameCanvas');
+    const ctx = canvas.getContext('2d');
 
-<script>
-const canvas = document.getElementById("gameCanvas");
-const ctx = canvas.getContext("2d");
+    const paddleWidth = 10;
+    const paddleHeight = 100;
+    const ballSize = 10;
 
-// Game objects
-const paddleWidth = 10, paddleHeight = 100;
-const player = { x: 0, y: canvas.height / 2 - paddleHeight / 2, width: paddleWidth, height: paddleHeight, color: 'white', score: 0 };
-const ai = { x: canvas.width - paddleWidth, y: canvas.height / 2 - paddleHeight / 2, width: paddleWidth, height: paddleHeight, color: 'white', score: 0 };
-const ball = { x: canvas.width / 2, y: canvas.height / 2, radius: 10, speed: 5, dx: 5, dy: 5, color: 'white' };
+    let human = { x: 0, y: canvas.height / 2 - paddleHeight / 2, score: 0 };
+    let ai = { x: canvas.width - paddleWidth, y: canvas.height / 2 - paddleHeight / 2, score: 0 };
+    let ball = {
+      x: canvas.width / 2,
+      y: canvas.height / 2,
+      vx: 5,
+      vy: 5
+    };
 
-// Draw functions
-function drawRect(x, y, w, h, color) {
-  ctx.fillStyle = color;
-  ctx.fillRect(x, y, w, h);
-}
+    let lastTime = performance.now();
+    let fps = 0;
 
-function drawCircle(x, y, r, color) {
-  ctx.fillStyle = color;
-  ctx.beginPath();
-  ctx.arc(x, y, r, 0, Math.PI * 2);
-  ctx.closePath();
-  ctx.fill();
-}
+    function drawRect(x, y, w, h, color) {
+      ctx.fillStyle = color;
+      ctx.fillRect(x, y, w, h);
+    }
 
-function drawText(text, x, y) {
-  ctx.fillStyle = "white";
-  ctx.font = "32px Arial";
-  ctx.fillText(text, x, y);
-}
+    function drawBall(x, y, size, color) {
+      ctx.fillStyle = color;
+      ctx.beginPath();
+      ctx.arc(x, y, size, 0, Math.PI * 2);
+      ctx.closePath();
+      ctx.fill();
+    }
 
-// Game logic
-function resetBall() {
-  ball.x = canvas.width / 2;
-  ball.y = canvas.height / 2;
-  ball.dx = -ball.dx;
-  ball.speed = 5;
-}
+    function drawText(text, x, y, color) {
+      ctx.fillStyle = color;
+      ctx.font = "20px Arial";
+      ctx.fillText(text, x, y);
+    }
 
-function collision(b, p) {
-  return b.x < p.x + p.width && b.x + b.radius > p.x &&
-         b.y < p.y + p.height && b.y + b.radius > p.y;
-}
+    function resetBall() {
+      if (ball.x < canvas.width / 2) ai.score++;
+      else human.score++;
 
-function update() {
-  // Move ball
-  ball.x += ball.dx;
-  ball.y += ball.dy;
+      ball.x = canvas.width / 2;
+      ball.y = canvas.height / 2;
+      ball.vx = -ball.vx;
+      ball.vy = 5 * (Math.random() > 0.5 ? 1 : -1);
+    }
 
-  // Wall collision
-  if (ball.y + ball.radius > canvas.height || ball.y - ball.radius < 0) {
-    ball.dy = -ball.dy;
-  }
+    function update() {
+      ball.x += ball.vx;
+      ball.y += ball.vy;
 
-  // Player collision
-  let playerOrAI = ball.x < canvas.width / 2 ? player : ai;
+      if (ball.y < 0 || ball.y > canvas.height) {
+        ball.vy = -ball.vy;
+      }
 
-  if (collision(ball, playerOrAI)) {
-    let collidePoint = (ball.y - (playerOrAI.y + playerOrAI.height / 2));
-    collidePoint = collidePoint / (playerOrAI.height / 2);
-    let angleRad = collidePoint * (Math.PI / 4);
-    let direction = ball.x < canvas.width / 2 ? 1 : -1;
-    ball.dx = direction * ball.speed * Math.cos(angleRad);
-    ball.dy = ball.speed * Math.sin(angleRad);
-    ball.speed += 0.5;
-  }
+      if (ball.x < paddleWidth &&
+          ball.y > human.y &&
+          ball.y < human.y + paddleHeight) {
+        ball.vx = -ball.vx;
+      }
 
-  // Score update
-  if (ball.x - ball.radius < 0) {
-    ai.score++;
-    resetBall();
-  } else if (ball.x + ball.radius > canvas.width) {
-    player.score++;
-    resetBall();
-  }
+      if (ball.x > canvas.width - paddleWidth &&
+          ball.y > ai.y &&
+          ball.y < ai.y + paddleHeight) {
+        ball.vx = -ball.vx;
+      }
 
-  // AI movement
-  ai.y += ((ball.y - (ai.y + ai.height / 2))) * 0.1;
-}
+      if (ball.x < 0 || ball.x > canvas.width) {
+        resetBall();
+      }
 
-function render() {
-  drawRect(0, 0, canvas.width, canvas.height, "black");
-  drawRect(player.x, player.y, player.width, player.height, player.color);
-  drawRect(ai.x, ai.y, ai.width, ai.height, ai.color);
-  drawCircle(ball.x, ball.y, ball.radius, ball.color);
-  drawText(player.score, canvas.width / 4, 50);
-  drawText(ai.score, 3 * canvas.width / 4, 50);
-}
+      const aiCenter = ai.y + paddleHeight / 2;
+      if (ball.y < aiCenter - 20) ai.y -= 5;
+      else if (ball.y > aiCenter + 20) ai.y += 5;
 
-function game() {
-  update();
-  render();
-}
+      ai.y = Math.max(Math.min(ai.y, canvas.height - paddleHeight), 0);
+    }
 
-setInterval(game, 1000 / 60);
+    function render() {
+      drawRect(0, 0, canvas.width, canvas.height, '#000');
+      drawRect(human.x, human.y, paddleWidth, paddleHeight, 'white');
+      drawRect(ai.x, ai.y, paddleWidth, paddleHeight, 'white');
+      drawBall(ball.x, ball.y, ballSize, 'white');
+      drawText(`Human: ${human.score}`, 20, 30, 'white');
+      drawText(`AI: ${ai.score}`, canvas.width - 100, 30, 'white');
+      drawText(`FPS: ${fps}`, canvas.width / 2 - 30, 30, 'white');
+    }
 
-// Player control - Mouse
-canvas.addEventListener("mousemove", evt => {
-  const rect = canvas.getBoundingClientRect();
-  player.y = evt.clientY - rect.top - player.height / 2;
-});
+    function gameLoop(currentTime) {
+      const delta = (currentTime - lastTime) / 1000;
+      fps = Math.round(1 / delta);
+      lastTime = currentTime;
 
-// Player control - Touch (Mobile)
-canvas.addEventListener("touchmove", evt => {
-  evt.preventDefault();
-  const touch = evt.touches[0];
-  const rect = canvas.getBoundingClientRect();
-  player.y = touch.clientY - rect.top - player.height / 2;
-});
-</script>
+      update();
+      render();
+      requestAnimationFrame(gameLoop);
+    }
+
+    function updateHumanPaddle(y) {
+      const rect = canvas.getBoundingClientRect();
+      human.y = y - rect.top - paddleHeight / 2;
+      human.y = Math.max(Math.min(human.y, canvas.height - paddleHeight), 0);
+    }
+
+    canvas.addEventListener('mousemove', (e) => {
+      updateHumanPaddle(e.clientY);
+    });
+
+    canvas.addEventListener('touchmove', (e) => {
+      if (e.touches.length > 0) {
+        updateHumanPaddle(e.touches[0].clientY);
+      }
+    }, { passive: false });
+
+    requestAnimationFrame(gameLoop);
+  </script>
 </body>
 </html>
