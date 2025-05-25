@@ -9,6 +9,7 @@
       background: black;
       display: block;
       margin: 0 auto;
+      touch-action: none; /* Prevents scrolling on touch */
     }
   </style>
 </head>
@@ -110,10 +111,18 @@ function game() {
 
 setInterval(game, 1000 / 60);
 
-// Player control
+// Player control - Mouse
 canvas.addEventListener("mousemove", evt => {
   const rect = canvas.getBoundingClientRect();
   player.y = evt.clientY - rect.top - player.height / 2;
+});
+
+// Player control - Touch (Mobile)
+canvas.addEventListener("touchmove", evt => {
+  evt.preventDefault();
+  const touch = evt.touches[0];
+  const rect = canvas.getBoundingClientRect();
+  player.y = touch.clientY - rect.top - player.height / 2;
 });
 </script>
 </body>
