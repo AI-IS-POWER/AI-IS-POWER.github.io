@@ -1,0 +1,125 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>JS File Uploader and Runner</title>
+    <style>
+        body {
+            font-family: sans-serif;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            min-height: 100vh;
+            margin: 0;
+            background-color: #f0f0f0;
+        }
+        #file-upload-container {
+            background-color: white;
+            padding: 30px;
+            border-radius: 8px;
+            box-shadow: 0 4px 8px rgba(0, 0, 0, 0.1);
+            text-align: center;
+        }
+        input[type="file"] {
+            margin-bottom: 20px;
+        }
+        button {
+            background-color: #007bff;
+            color: white;
+            padding: 10px 20px;
+            border: none;
+            border-radius: 5px;
+            cursor: pointer;
+            font-size: 16px;
+            transition: background-color 0.3s ease;
+        }
+        button:hover {
+            background-color: #0056b3;
+        }
+        #output {
+            margin-top: 20px;
+            padding: 15px;
+            background-color: #e9e9e9;
+            border-radius: 5px;
+            white-space: pre-wrap; /* Preserve formatting */
+            text-align: left;
+            max-width: 80%;
+            overflow-x: auto;
+        }
+    </style>
+</head>
+<body>
+    <div id="file-upload-container">
+        <h1>Upload and Run JavaScript</h1>
+        <input type="file" id="jsFile" accept=".js">
+        <button id="runButton">Run JS Full Screen</button>
+        <p><em>Note: Script will run within the browser's security sandbox.</em></p>
+    </div>
+    <pre id="output"></pre>
+
+    <script>
+        const jsFile = document.getElementById('jsFile');
+        const runButton = document.getElementById('runButton');
+        const outputDiv = document.getElementById('output');
+
+        runButton.addEventListener('click', () => {
+            const file = jsFile.files[0];
+
+            if (!file) {
+                alert('Please select a JavaScript file first.');
+                return;
+            }
+
+            if (file.type !== 'application/javascript' && !file.name.endsWith('.js')) {
+                alert('Please select a valid .js file.');
+                return;
+            }
+
+            const reader = new FileReader();
+
+            reader.onload = (e) => {
+                const scriptContent = e.target.result;
+
+                try {
+                    // Attempt to go full screen
+                    if (document.documentElement.requestFullscreen) {
+                        document.documentElement.requestFullscreen();
+                    } else if (document.documentElement.mozRequestFullScreen) { /* Firefox */
+                        document.documentElement.mozRequestFullScreen();
+                    } else if (document.documentElement.webkitRequestFullscreen) { /* Chrome, Safari & Opera */
+                        document.documentElement.webkitRequestFullscreen();
+                    } else if (document.documentElement.msRequestFullscreen) { /* IE/Edge */
+                        document.documentElement.msRequestFullscreen();
+                    } else {
+                        console.warn("Fullscreen API is not supported by this browser.");
+                    }
+
+                    // Execute the script content
+                    // IMPORTANT: This executes the script in the current global scope.
+                    // Be extremely cautious with scripts from untrusted sources!
+                    const scriptElement = document.createElement('script');
+                    scriptElement.textContent = scriptContent;
+                    document.body.appendChild(scriptElement);
+                    outputDiv.textContent = 'Script executed successfully. Check console for output.';
+                    console.log('--- Start of uploaded script output ---');
+                    // Any console.log calls from the executed script will appear here
+                    console.log('--- End of uploaded script output ---');
+
+                } catch (error) {
+                    outputDiv.textContent = `Error executing script: ${error.message}`;
+                    console.error('Error executing uploaded script:', error);
+                }
+            };
+
+            reader.onerror = (e) => {
+                outputDiv.textContent = `Error reading file: ${e.target.error}`;
+                console.error('Error reading file:', e.target.error);
+            };
+
+            reader.readAsText(file);
+        });
+    </script>
+</body>
+</html>
