@@ -1,0 +1,100 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Simple HTML IDE</title>
+  <style>
+    body, html {
+      margin: 0; padding: 0;
+      height: 100%; font-family: sans-serif;
+      display: flex; flex-direction: column;
+    }
+    header {
+      background: #333; color: #fff;
+      padding: 0.5em 1em;
+      display: flex; align-items: center;
+    }
+    header button {
+      margin-left: 0.5em;
+      padding: 0.4em 0.8em;
+      border: none; border-radius: 4px;
+      cursor: pointer;
+    }
+    header button:hover { opacity: 0.9; }
+    main {
+      flex: 1; display: flex; overflow: hidden;
+    }
+    #editor {
+      width: 50%; border-right: 1px solid #ccc;
+      box-sizing: border-box; padding: 0;
+    }
+    #editor textarea {
+      width: 100%; height: 100%;
+      border: none; padding: 1em;
+      box-sizing: border-box;
+      font-family: monospace; font-size: 14px;
+      resize: none;
+    }
+    #preview {
+      flex: 1; border: none;
+    }
+  </style>
+</head>
+<body>
+
+  <header>
+    <strong>Simple HTML IDE</strong>
+    <button id="runBtn">Run ▶️</button>
+    <button id="downloadBtn">Download ⬇️</button>
+  </header>
+
+  <main>
+    <div id="editor">
+      <textarea id="code" spellcheck="false">
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>My Page</title>
+</head>
+<body>
+  <h1>Hello, world!</h1>
+  <p>Edit this code and click Run to preview.</p>
+</body>
+</html>
+      </textarea>
+    </div>
+    <iframe id="preview"></iframe>
+  </main>
+
+  <script>
+    const runBtn = document.getElementById('runBtn');
+    const downloadBtn = document.getElementById('downloadBtn');
+    const codeArea = document.getElementById('code');
+    const previewFrame = document.getElementById('preview');
+
+    // Run / Preview
+    runBtn.addEventListener('click', () => {
+      const html = codeArea.value;
+      previewFrame.srcdoc = html;
+    });
+
+    // Download as .html
+    downloadBtn.addEventListener('click', () => {
+      const blob = new Blob([codeArea.value], { type: 'text/html' });
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement('a');
+      a.href = url;
+      a.download = 'index.html';
+      document.body.appendChild(a);
+      a.click();
+      document.body.removeChild(a);
+      URL.revokeObjectURL(url);
+    });
+
+    // Auto-run initial content
+    window.addEventListener('load', () => runBtn.click());
+  </script>
+
+</body>
+</html>
