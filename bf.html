@@ -1,0 +1,153 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Brainfuck Compiler</title>
+  <style>
+    body {
+      font-family: sans-serif;
+      margin: 0;
+      display: flex;
+      flex-direction: column;
+      height: 100vh;
+    }
+    header {
+      background: #222;
+      color: #fff;
+      padding: 1rem;
+      text-align: center;
+    }
+    main {
+      flex: 1;
+      display: grid;
+      grid-template-columns: 1fr 1fr;
+      gap: 1rem;
+      padding: 1rem;
+      box-sizing: border-box;
+    }
+    textarea, pre {
+      width: 100%;
+      height: 100%;
+      box-sizing: border-box;
+      font-family: monospace;
+      font-size: 0.9rem;
+      padding: 0.5rem;
+      border: 1px solid #ccc;
+      border-radius: 4px;
+      resize: none;
+    }
+    .controls {
+      grid-column: span 2;
+      display: flex;
+      gap: 1rem;
+      align-items: center;
+    }
+    button {
+      padding: 0.5rem 1rem;
+      font-size: 1rem;
+      border: none;
+      border-radius: 4px;
+      cursor: pointer;
+      background: #007acc;
+      color: white;
+    }
+    button:hover {
+      background: #005fa3;
+    }
+    .io {
+      display: flex;
+      flex-direction: column;
+      gap: 0.5rem;
+      grid-column: span 2;
+    }
+    label {
+      font-weight: bold;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Brainfuck → JavaScript Compiler & Runner</h1>
+  </header>
+  <main>
+    <div>
+      <label for="bfCode">Brainfuck Code</label>
+      <textarea id="bfCode" placeholder="Enter Brainfuck here…">++++++++++[>+++++++>++++++++++>+++>+<<<<-]>++.>+.+++++++..+++.>++.<<+++++++++++++++.>.+++.------.--------.>+.>.</textarea>
+    </div>
+
+    <div>
+      <label for="jsCode">Compiled JavaScript</label>
+      <textarea id="jsCode" readonly placeholder="Compiled JS appears here…"></textarea>
+    </div>
+
+    <div class="controls">
+      <button id="compileBtn">Compile → JS</button>
+      <button id="runBtn">Run››</button>
+    </div>
+
+    <div class="io">
+      <label for="bfInput">Input (stdin)</label>
+      <textarea id="bfInput" placeholder="Input for ',' commands"></textarea>
+    </div>
+
+    <div class="io">
+      <label for="bfOutput">Output (stdout)</label>
+      <pre id="bfOutput"></pre>
+    </div>
+  </main>
+
+  <script>
+    // Compile Brainfuck to JS function body
+    function compileBrainfuck(code) {
+      const js = [];
+      js.push('return (function(input){');
+      js.push('  const tape = Array(30000).fill(0);');
+      js.push('  let ptr = 0, inpPtr = 0, output = "";');
+      js.push('  const read = ()=> input.charCodeAt(inpPtr++) || 0;');
+      for (let i = 0; i < code.length; i++) {
+        const c = code[i];
+        switch(c) {
+          case '>': js.push('  ptr++;'); break;
+          case '<': js.push('  ptr--;'); break;
+          case '+': js.push('  tape[ptr] = (tape[ptr] + 1) & 255;'); break;
+          case '-': js.push('  tape[ptr] = (tape[ptr] - 1) & 255;'); break;
+          case '.': js.push('  output += String.fromCharCode(tape[ptr]);'); break;
+          case ',': js.push('  tape[ptr] = read();'); break;
+          case '[': js.push('  while(tape[ptr]){'); break;
+          case ']': js.push('  }'); break;
+          default: /* ignore other chars */ break;
+        }
+      }
+      js.push('  return output;');
+      js.push('})');
+      return js.join('\n');
+    }
+
+    document.getElementById('compileBtn').addEventListener('click', ()=>{
+      const bf = document.getElementById('bfCode').value;
+      try {
+        const jsSrc = compileBrainfuck(bf);
+        document.getElementById('jsCode').value = jsSrc;
+      } catch (err) {
+        document.getElementById('jsCode').value = 'Compile error: ' + err;
+      }
+    });
+
+    document.getElementById('runBtn').addEventListener('click', ()=>{
+      const jsSrc = document.getElementById('jsCode').value;
+      const input = document.getElementById('bfInput').value;
+      try {
+        // create the compiled function
+        const fn = new Function(jsSrc)();
+        const out = fn(input);
+        document.getElementById('bfOutput').textContent = out;
+      } catch (err) {
+        document.getElementById('bfOutput').textContent = 'Runtime error: ' + err;
+      }
+    });
+
+    // Auto‑compile example on load
+    window.addEventListener('load', () => document.getElementById('compileBtn').click());
+  </script>
+</body>
+</html>
