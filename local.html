@@ -1,0 +1,159 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Storage Editor</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        h1 {
+            color: #0056b3;
+        }
+        .item-container {
+            background-color: #fff;
+            padding: 15px;
+            margin-bottom: 10px;
+            border-radius: 8px;
+            box-shadow: 0 2px 4px rgba(0, 0, 0, 0.1);
+        }
+        .item-container label {
+            font-weight: bold;
+            display: block;
+            margin-bottom: 5px;
+            color: #555;
+        }
+        .item-container input[type="text"],
+        .item-container textarea {
+            width: calc(100% - 22px); /* Account for padding and border */
+            padding: 10px;
+            margin-bottom: 10px;
+            border: 1px solid #ccc;
+            border-radius: 4px;
+            font-family: monospace; /* For better display of JSON/text */
+            font-size: 0.9em;
+            box-sizing: border-box; /* Include padding and border in the element's total width and height */
+        }
+        .item-container textarea {
+            min-height: 80px;
+            resize: vertical;
+        }
+        .item-container button {
+            background-color: #007bff;
+            color: white;
+            padding: 8px 15px;
+            border: none;
+            border-radius: 4px;
+            cursor: pointer;
+            font-size: 0.9em;
+            transition: background-color 0.2s ease;
+        }
+        .item-container button:hover {
+            background-color: #0056b3;
+        }
+        #noData {
+            color: #888;
+            font-style: italic;
+        }
+        .message {
+            margin-top: 10px;
+            padding: 10px;
+            border-radius: 4px;
+            font-weight: bold;
+        }
+        .message.success {
+            background-color: #d4edda;
+            color: #155724;
+            border: 1px solid #c3e6cb;
+        }
+        .message.error {
+            background-color: #f8d7da;
+            color: #721c24;
+            border: 1px solid #f5c6cb;
+        }
+    </style>
+</head>
+<body>
+    <h1>Local Storage Editor</h1>
+    <div id="localStorageEditor"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const editorDiv = document.getElementById('localStorageEditor');
+
+            function displayLocalStorage() {
+                editorDiv.innerHTML = ''; // Clear previous content
+
+                if (localStorage.length === 0) {
+                    editorDiv.innerHTML = '<p id="noData">No data found in Local Storage.</p>';
+                    return;
+                }
+
+                for (let i = 0; i < localStorage.length; i++) {
+                    const key = localStorage.key(i);
+                    const value = localStorage.getItem(key);
+
+                    const itemContainer = document.createElement('div');
+                    itemContainer.classList.add('item-container');
+
+                    // Key Display (read-only for now, but could be editable with more complexity)
+                    const keyLabel = document.createElement('label');
+                    keyLabel.textContent = `Key: ${key}`;
+                    itemContainer.appendChild(keyLabel);
+
+                    // Value Input
+                    const valueInput = document.createElement('textarea');
+                    valueInput.id = `value-${key}`;
+                    valueInput.value = value; // Display raw value
+                    itemContainer.appendChild(valueInput);
+
+                    // Save Button
+                    const saveButton = document.createElement('button');
+                    saveButton.textContent = 'Save';
+                    saveButton.onclick = () => saveValue(key, valueInput.value);
+                    itemContainer.appendChild(saveButton);
+
+                    // Message Area for success/error
+                    const messageArea = document.createElement('div');
+                    messageArea.id = `message-${key}`;
+                    messageArea.classList.add('message');
+                    itemContainer.appendChild(messageArea);
+
+
+                    editorDiv.appendChild(itemContainer);
+                }
+            }
+
+            function saveValue(key, newValue) {
+                const messageArea = document.getElementById(`message-${key}`);
+                messageArea.textContent = ''; // Clear previous messages
+                messageArea.classList.remove('success', 'error');
+
+                try {
+                    // Attempt to parse new value as JSON if it looks like one, otherwise store as string
+                    let valueToStore = newValue;
+                    if ((newValue.startsWith('{') && newValue.endsWith('}')) || (newValue.startsWith('[') && newValue.endsWith(']'))) {
+                        JSON.parse(newValue); // Just validate if it's valid JSON
+                        valueToStore = newValue; // Keep it as string, localStorage only stores strings
+                    }
+                    
+                    localStorage.setItem(key, valueToStore);
+                    messageArea.textContent = `Successfully saved "${key}"!`;
+                    messageArea.classList.add('success');
+                } catch (e) {
+                    messageArea.textContent = `Error saving "${key}": Invalid JSON or other error.`;
+                    messageArea.classList.add('error');
+                    console.error("Error saving localStorage item:", e);
+                }
+            }
+
+            // Initial display
+            displayLocalStorage();
+        });
+    </script>
+</body>
+</html>
