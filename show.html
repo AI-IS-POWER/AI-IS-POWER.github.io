@@ -1,0 +1,62 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Local Storage Data</title>
+    <style>
+        body {
+            font-family: Arial, sans-serif;
+            margin: 20px;
+            background-color: #f4f4f4;
+            color: #333;
+        }
+        h1 {
+            color: #0056b3;
+        }
+        pre {
+            background-color: #e2e2e2;
+            padding: 15px;
+            border-radius: 8px;
+            white-space: pre-wrap;
+            word-wrap: break-word;
+            border: 1px solid #ccc;
+        }
+        #noData {
+            color: #888;
+            font-style: italic;
+        }
+    </style>
+</head>
+<body>
+    <h1>Local Storage Data</h1>
+    <div id="localStorageOutput"></div>
+
+    <script>
+        document.addEventListener('DOMContentLoaded', () => {
+            const outputDiv = document.getElementById('localStorageOutput');
+            const localStorageData = {};
+
+            if (localStorage.length === 0) {
+                outputDiv.innerHTML = '<p id="noData">No data found in Local Storage.</p>';
+                return;
+            }
+
+            for (let i = 0; i < localStorage.length; i++) {
+                const key = localStorage.key(i);
+                try {
+                    // Attempt to parse as JSON, otherwise store as plain string
+                    localStorageData[key] = JSON.parse(localStorage.getItem(key));
+                } catch (e) {
+                    localStorageData[key] = localStorage.getItem(key);
+                }
+            }
+
+            // Display the data in a pre-formatted block
+            const preElement = document.createElement('pre');
+            preElement.textContent = JSON.stringify(localStorageData, null, 2); // Pretty print JSON
+            outputDiv.appendChild(preElement);
+        });
+    </script>
+</body>
+</html>
