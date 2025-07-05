@@ -1,0 +1,215 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Labyrinth Nexus</title>
+  <style>
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body, html { width: 100%; height: 100%; overflow: hidden; font-family: sans-serif; }
+    #mazeCanvas { display: none; background: #f0f0f0; touch-action: none; }
+    #gameTitle, #gameTitleGame, #levelLabel, #backButton { display: none; position: absolute; z-index: 1; }
+    #gameTitle, #gameTitleGame { font-size: 24px; font-weight: bold; text-align: center; }
+    #levelLabel { font-size: 16px; font-weight: bold; text-align: center; }
+    #backButton { padding: 8px 12px; font-size: 14px; cursor: pointer; }
+    #levelMap { position: absolute; top: 0; left: 0; right: 0; bottom: 0; display: flex; flex-direction: column; align-items: center; justify-content: center; background: #f0f0f0; }
+    .legend { margin-bottom: 20px; display: flex; gap: 15px; font-size: 14px; }
+    .legend div { display: flex; align-items: center; gap: 5px; }
+    .legend span { width: 16px; height: 16px; display: inline-block; border: 1px solid #333; }
+    .map-grid { display: grid; gap: 10px; }
+    .map-cell { width: 40px; height: 40px; border: 2px solid #333; display: flex; align-items: center; justify-content: center; cursor: pointer; user-select: none; }
+    .unlocked { background: #33a; color: white; }
+    .next-level { background: #ffa500; color: white; }
+    .locked { background: transparent; opacity: 0.3; cursor: default; }
+  </style>
+</head>
+<body>
+  <!-- Menu Screen -->
+  <div id="levelMap">
+    <div id="gameTitle">Labyrinth Nexus</div>
+    <div class="legend">
+      <div><span class="unlocked"></span> Unlocked</div>
+      <div><span class="next-level"></span> Next Level</div>
+      <div><span class="locked"></span> Locked</div>
+    </div>
+  </div>
+
+  <!-- Game Screen Controls -->
+  <div id="gameTitleGame">Labyrinth Nexus</div>
+  <div id="levelLabel"></div>
+  <button id="backButton">Back to Menu</button>
+  <canvas id="mazeCanvas"></canvas>
+  
+  <script>
+    const levelMapDiv = document.getElementById('levelMap');
+    const gameTitle = document.getElementById('gameTitle');
+    const gameTitleGame = document.getElementById('gameTitleGame');
+    const levelLabel = document.getElementById('levelLabel');
+    const backButton = document.getElementById('backButton');
+    const canvas = document.getElementById('mazeCanvas');
+    const ctx = canvas.getContext('2d');
+    let width, height, rows, cols, cellSize;
+    let grid = [], stack = [];
+    let startCell, endCell;
+    let currentLevel = null;
+    const maxGrid = 30;
+    const maxMapLevels = 20;
+
+    let highestUnlocked = parseInt(localStorage.getItem('highestUnlocked')) || 1;
+    const player = { r:0, c:0, x:0, y:0, targetX:0, targetY:0 };
+    let dragging = false;
+
+    backButton.addEventListener('click', () => {
+      currentLevel = null;
+      gameTitleGame.style.display = 'none';
+      levelLabel.style.display = 'none';
+      backButton.style.display = 'none';
+      showLevelMap();
+    });
+
+    function showLevelMap() {
+      canvas.style.display = 'none';
+      gameTitleGame.style.display = 'none';
+      levelLabel.style.display = 'none';
+      backButton.style.display = 'none';
+      levelMapDiv.style.display = 'flex';
+      gameTitle.style.display = 'block';
+      levelMapDiv.querySelectorAll('.map-grid').forEach(el => el.remove());
+
+      const gridDiv = document.createElement('div');
+      gridDiv.className = 'map-grid';
+      const colsMap = Math.ceil(Math.sqrt(maxMapLevels));
+      gridDiv.style.gridTemplateColumns = `repeat(${colsMap}, auto)`;
+
+      for (let i = 1; i <= maxMapLevels; i++) {
+        const cell = document.createElement('div');
+        cell.className = 'map-cell';
+        cell.textContent = i;
+        if (i <= highestUnlocked) {
+          cell.classList.add('unlocked');
+          cell.addEventListener('click', () => startLevel(i));
+        } else if (i === highestUnlocked + 1) {
+          cell.classList.add('next-level');
+          cell.addEventListener('click', () => startLevel(i));
+        } else {
+          cell.classList.add('locked');
+        }
+        gridDiv.appendChild(cell);
+      }
+      levelMapDiv.appendChild(gridDiv);
+    }
+
+    function startLevel(lvl) {
+      currentLevel = lvl;
+      levelMapDiv.style.display = 'none';
+      canvas.style.display = 'block';
+      gameTitleGame.style.display = 'block';
+
+      // position titles and controls in blank area
+      const mazeSize = Math.min(window.innerWidth, window.innerHeight);
+      gameTitleGame.style.left = `${mazeSize + 10}px`;
+      gameTitleGame.style.top = `10px`;
+
+      levelLabel.textContent = `Level ${currentLevel}`;
+      levelLabel.style.left = `${mazeSize + 10}px`;
+      levelLabel.style.top = `50px`;
+      levelLabel.style.display = 'block';
+
+      backButton.style.left = `${mazeSize + 10}px`;
+      backButton.style.top = `80px`;
+      backButton.style.display = 'block';
+
+      initGame();
+    }
+
+    function initGame() {
+      width = canvas.width = window.innerWidth;
+      height = canvas.height = window.innerHeight;
+      setupMaze();
+      player.x = player.targetX;
+      player.y = player.targetY;
+      requestAnimationFrame(loop);
+    }
+
+    function setupMaze() {
+      const gridCount = Math.min(10 + currentLevel, maxGrid);
+      rows = cols = gridCount;
+      cellSize = Math.floor(Math.min(width, height) / gridCount);
+      grid = [];
+      for (let r = 0; r < rows; r++) for (let c = 0; c < cols; c++) grid.push(new Cell(r, c));
+
+      let current = grid[0]; current.visited = true; stack = [current];
+      while (stack.length) {
+        const next = checkNeighbors(current);
+        if (next) { next.visited = true; stack.push(current); removeWalls(current, next); current = next; }
+        else current = stack.pop();
+      }
+
+      startCell = grid[0]; endCell = grid[rows*cols - 1];
+      player.r = startCell.r; player.c = startCell.c;
+      player.targetX = player.c * cellSize + cellSize / 2;
+      player.targetY = player.r * cellSize + cellSize / 2;
+    }
+
+    class Cell {
+      constructor(r,c) { this.r=r; this.c=c; this.walls={top:true,right:true,bottom:true,left:true}; this.visited=false; }
+      draw() {
+        const x = this.c * cellSize, y = this.r * cellSize;
+        ctx.strokeStyle = '#333'; ctx.lineWidth = 2;
+        if (this.walls.top) ctx.beginPath(), ctx.moveTo(x, y), ctx.lineTo(x+cellSize, y), ctx.stroke();
+        if (this.walls.right) ctx.beginPath(), ctx.moveTo(x+cellSize, y), ctx.lineTo(x+cellSize, y+cellSize), ctx.stroke();
+        if (this.walls.bottom) ctx.beginPath(), ctx.moveTo(x+cellSize, y+cellSize), ctx.lineTo(x, y+cellSize), ctx.stroke();
+        if (this.walls.left) ctx.beginPath(), ctx.moveTo(x, y+cellSize), ctx.lineTo(x, y), ctx.stroke();
+      }
+    }
+    function index(r,c){return r<0||c<0||r>=rows||c>=cols?-1:r*cols+c;}
+    function checkNeighbors(cell){const dirs=[[cell.r-1,cell.c],[cell.r,cell.c+1],[cell.r+1,cell.c],[cell.r,cell.c-1]];
+      const n = dirs.map(([r,c]) => grid[index(r,c)]).filter(v => v && !v.visited);
+      return n.length ? n[Math.floor(Math.random()*n.length)] : undefined;
+    }
+    function removeWalls(a,b){const dx=a.c-b.c; if(dx===1){a.walls.left=false;b.walls.right=false;} if(dx===-1){a.walls.right=false;b.walls.left=false;}
+      const dy=a.r-b.r; if(dy===1){a.walls.top=false;b.walls.bottom=false;} if(dy===-1){a.walls.bottom=false;b.walls.top=false;} }
+
+    function loop() { draw(); player.x += (player.targetX-player.x)*0.2; player.y += (player.targetY-player.y)*0.2; requestAnimationFrame(loop); }
+
+    function draw() {
+      ctx.clearRect(0,0,width,height);
+      grid.forEach(cell=>cell.draw());
+      ctx.fillStyle='#aaf'; ctx.fillRect(endCell.c*cellSize+4,endCell.r*cellSize+4,cellSize-8,cellSize-8);
+      ctx.beginPath(); ctx.arc(player.x,player.y,cellSize*0.3,0,Math.PI*2); ctx.fillStyle='#33a'; ctx.fill();
+    }
+
+    function tryMove(nr,nc){const cur=grid[index(player.r,player.c)]; const dr=nr-player.r, dc=nc-player.c;
+      if(dr===-1&&!cur.walls.top) player.r--; else if(dr===1&&!cur.walls.bottom) player.r++;
+      else if(dc===-1&&!cur.walls.left) player.c--; else if(dc===1&&!cur.walls.right) player.c++;
+      player.targetX = player.c*cellSize + cellSize/2;
+      player.targetY = player.r*cellSize + cellSize/2;
+      checkWin();
+    }
+
+    function checkWin() {
+      if (player.r === endCell.r && player.c === endCell.c) {
+        highestUnlocked = Math.max(highestUnlocked, currentLevel+1);
+        localStorage.setItem('highestUnlocked', highestUnlocked);
+        setTimeout(() => startLevel(currentLevel+1), 300);
+      }
+    }
+
+    canvas.addEventListener('pointerdown', e => {
+      const rect = canvas.getBoundingClientRect();
+      const x = e.clientX-rect.left, y = e.clientY-rect.top;
+      if (Math.hypot(x-player.x, y-player.y) < cellSize*0.6) dragging = true;
+    });
+    canvas.addEventListener('pointermove', e => { if (!dragging) return;
+      const rect = canvas.getBoundingClientRect();
+      const c = Math.floor((e.clientX-rect.left)/cellSize);
+      const r = Math.floor((e.clientY-rect.top)/cellSize);
+      if ((r!==player.r||c!==player.c) && index(r,c)>=0) tryMove(r,c);
+    });
+    canvas.addEventListener('pointerup', () => { dragging = false; });
+    window.addEventListener('resize', () => { if (currentLevel) initGame(); else showLevelMap(); });
+
+    showLevelMap();
+  </script>
+</body>
+</html>
